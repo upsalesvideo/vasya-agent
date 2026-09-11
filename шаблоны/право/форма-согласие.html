@@ -1,0 +1,85 @@
+<!--
+  Форма заявки с согласиями (152-ФЗ, ст. 9; ФЗ «О рекламе», ст. 18).
+  Правила: обе галочки сняты по умолчанию; первая обязательна; кнопка неактивна без неё;
+  с заявкой уходят consent_version, consent_at, page, marketing.
+  CONSENT_VERSION менять при изменении текста согласия (consent.html).
+-->
+<form class="lead-form" id="lead-form" novalidate>
+  <div class="field">
+    <label for="lead-name">Имя</label>
+    <input id="lead-name" name="name" type="text" autocomplete="name" required>
+  </div>
+  <div class="field">
+    <label for="lead-phone">Телефон или мессенджер</label>
+    <input id="lead-phone" name="contact" type="text" autocomplete="tel" inputmode="tel" required>
+  </div>
+
+  <!-- скрытые поля: доказательство согласия -->
+  <input type="hidden" name="consent" value="0">
+  <input type="hidden" name="consent_version" value="">
+  <input type="hidden" name="consent_at" value="">
+  <input type="hidden" name="page" value="">
+  <input type="hidden" name="marketing" value="0">
+
+  <div class="consent">
+    <label class="check">
+      <input type="checkbox" name="consent_pd" id="consent-pd" required>
+      <span>Даю согласие на обработку персональных данных на условиях
+        <a href="consent.html" target="_blank" rel="noopener">согласия</a> и
+        <a href="privacy.html" target="_blank" rel="noopener">политики</a></span>
+    </label>
+    <label class="check">
+      <input type="checkbox" name="consent_marketing" id="consent-marketing">
+      <span>Хочу получать новости и предложения на указанный контакт (необязательно)</span>
+    </label>
+  </div>
+
+  <button type="submit" class="btn btn--primary" id="lead-submit" disabled>Отправить заявку</button>
+  <p class="form-note">Перезвоним в течение часа в рабочее время.</p>
+  <p class="form-error" id="lead-error" role="alert" hidden></p>
+</form>
+
+<style>
+  .consent { display: grid; gap: var(--space-xs, 8px); margin-block: var(--space-sm, 16px); font-size: .9375rem; line-height: 1.4; }
+  .check { display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: start; cursor: pointer; min-height: 44px; }
+  .check input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--color-accent, #8a3b12); cursor: pointer; }
+  .check a { color: var(--color-accent, #8a3b12); text-decoration: underline; }
+  .btn[disabled] { opacity: .5; cursor: not-allowed; }
+  .form-error { color: var(--color-accent, #8a3b12); margin-top: var(--space-xs, 8px); }
+</style>
+
+<script>
+(function () {
+  var CONSENT_VERSION = '2026-09-11';        // = версия текста на consent.html
+  var form = document.getElementById('lead-form');
+  var pd = document.getElementById('consent-pd');
+  var mk = document.getElementById('consent-marketing');
+  var submit = document.getElementById('lead-submit');
+  var err = document.getElementById('lead-error');
+
+  pd.addEventListener('change', function () { submit.disabled = !pd.checked; });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    err.hidden = true;
+    if (!form.name.value.trim() || !form.contact.value.trim()) {
+      err.textContent = 'Заполните имя и контакт.'; err.hidden = false; return;
+    }
+    if (!pd.checked) {
+      err.textContent = 'Без согласия на обработку персональных данных мы не сможем принять заявку.'; err.hidden = false; return;
+    }
+    form.consent.value = '1';
+    form.consent_version.value = CONSENT_VERSION;
+    form.consent_at.value = new Date().toISOString();
+    form.page.value = location.href;
+    form.marketing.value = mk.checked ? '1' : '0';
+
+    submit.disabled = true; submit.textContent = 'Отправляем…';
+    // ОБРАБОТЧИК: сюда Вася подставляет способ отправки из интервью (свой скрипт на хостинге в РФ,
+    // Telegram-бот как дубль, почта). Данные формы уходят целиком, включая скрытые поля.
+    fetch(form.dataset.action || '/send.php', { method: 'POST', body: new FormData(form) })
+      .then(function (r) { if (!r.ok) throw new Error(); form.innerHTML = '<p class="form-done">Спасибо, заявка принята. Перезвоним в течение часа в рабочее время.</p>'; })
+      .catch(function () { err.textContent = 'Не получилось отправить. Напишите нам напрямую: {{КОНТАКТ_ЗАПАСНОЙ}}'; err.hidden = false; submit.disabled = false; submit.textContent = 'Отправить заявку'; });
+  });
+})();
+</script>

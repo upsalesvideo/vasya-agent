@@ -1,0 +1,90 @@
+<!--
+  Cookie-баннер для сайтов Васи. Вставляется перед </body> на каждой странице.
+  Стили — через токены DESIGN.md (переменные --color-*, --space-*, --radius-*).
+  Правила: две равнозначные кнопки, не блокирует контент, счётчики грузятся ТОЛЬКО после «Принять все».
+  Версию COOKIE_VERSION менять при изменении политики cookies — баннер покажется снова.
+-->
+<div class="cookie-banner" id="cookie-banner" role="dialog" aria-live="polite" aria-label="Использование файлов cookie" hidden>
+  <p class="cookie-banner__text">
+    Мы используем файлы cookie: необходимые для работы сайта и, с вашего согласия, аналитические
+    (Яндекс.Метрика). Подробнее: <a href="cookies.html">политика cookie</a>.
+  </p>
+  <div class="cookie-banner__actions">
+    <button type="button" class="btn btn--secondary" data-cookie="necessary">Только необходимые</button>
+    <button type="button" class="btn btn--primary" data-cookie="all">Принять все</button>
+  </div>
+</div>
+
+<style>
+  .cookie-banner {
+    position: fixed; inset-inline: var(--space-sm, 16px); bottom: var(--space-sm, 16px); z-index: 50;
+    max-width: 720px; margin-inline: auto;
+    display: grid; gap: var(--space-sm, 16px);
+    padding: var(--space-md, 24px);
+    background: var(--color-bg, #fff); color: var(--color-fg, #111);
+    border: 1px solid var(--color-border, #ddd); border-radius: var(--radius-md, 12px);
+    box-shadow: 0 12px 32px rgb(0 0 0 / .14);
+    font-size: .9375rem; line-height: 1.45;
+  }
+  .cookie-banner__text { margin: 0; }
+  .cookie-banner__text a { color: var(--color-accent, #8a3b12); text-decoration: underline; }
+  .cookie-banner__actions { display: flex; flex-wrap: wrap; gap: var(--space-xs, 8px); justify-content: flex-end; }
+  .cookie-banner__actions .btn { min-height: 44px; padding: 10px 18px; white-space: nowrap; flex: 1 1 auto; }   /* обе кнопки одного размера, без переносов */
+  @media (min-width: 640px) { .cookie-banner { grid-template-columns: 1fr auto; align-items: center; } }
+  @media (prefers-reduced-motion: no-preference) {
+    .cookie-banner { animation: cookie-in .3s cubic-bezier(.22,1,.36,1); }
+    @keyframes cookie-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+
+<script>
+(function () {
+  var KEY = 'cookie-consent';
+  var COOKIE_VERSION = '2026-09-11';       // менять при изменении политики cookies
+  var TTL_DAYS = 365;
+  var METRIKA_ID = 0;                      // номер счётчика Яндекс.Метрики владельца; 0 = счётчика нет
+  var banner = document.getElementById('cookie-banner');
+
+  function read() {
+    try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; }
+  }
+  function valid(c) {
+    if (!c || c.version !== COOKIE_VERSION) return false;
+    return (Date.now() - Date.parse(c.at)) < TTL_DAYS * 864e5;
+  }
+  function save(choice) {
+    try { localStorage.setItem(KEY, JSON.stringify({ choice: choice, version: COOKIE_VERSION, at: new Date().toISOString() })); } catch (e) {}
+  }
+  function loadAnalytics() {
+    if (!METRIKA_ID || window.ym) return;
+    // Скрипт Метрики появляется на странице только здесь, после явного «Принять все»
+    (function (m, e, t, r, i, k, a) { m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments); };
+      m[i].l = 1 * new Date(); k = e.createElement(t); a = e.getElementsByTagName(t)[0]; k.async = 1; k.src = r; a.parentNode.insertBefore(k, a);
+    })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym');
+    window.ym(METRIKA_ID, 'init', { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false });
+  }
+  function show() { banner.hidden = false; }
+  function hide() { banner.hidden = true; }
+
+  banner.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-cookie]');
+    if (!b) return;
+    save(b.dataset.cookie);
+    hide();
+    if (b.dataset.cookie === 'all') loadAnalytics();
+  });
+
+  // Ссылка «Настройки cookie» в подвале снова открывает баннер
+  document.querySelectorAll('[data-cookie-settings]').forEach(function (a) {
+    a.addEventListener('click', function (e) { e.preventDefault(); show(); });
+  });
+
+  var c = read();
+  if (valid(c)) { if (c.choice === 'all') loadAnalytics(); }
+  else { show(); }
+})();
+</script>
+
+<!-- В подвале каждой страницы:
+<a href="cookies.html" data-cookie-settings>Настройки cookie</a>
+-->

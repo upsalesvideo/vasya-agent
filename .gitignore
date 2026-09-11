@@ -1,0 +1,9 @@
+# Проекты клиентов и секреты не публикуем
+сайты/*
+!сайты/.gitkeep
+genosai_key.txt
+hosting.json
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
