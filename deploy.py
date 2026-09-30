@@ -153,6 +153,36 @@ def check(slug, title=None):
     return ok
 
 
+LEGAL_PAGES = {
+    "privacy.html": "Политика обработки персональных данных (ст. 18.1 152-ФЗ)",
+    "consent.html": "Согласие на обработку персональных данных (ст. 9 152-ФЗ, отдельный документ)",
+    "offer.html": "Публичная оферта (ст. 435–438 ГК РФ, ЗоЗПП)",
+}
+
+
+def legal_check(local_root):
+    """Три обязательные страницы по закону РФ: без них сайт не выкладывается (см. право.md)."""
+    missing = [f"  - {name}: {what}" for name, what in LEGAL_PAGES.items()
+               if not os.path.exists(os.path.join(local_root, name))]
+    if missing:
+        sys.exit("Не выкладываю: нет обязательных страниц по закону РФ —\n" + "\n".join(missing)
+                 + "\nСобери их из шаблоны/право/ (см. право.md) и повтори.")
+    with open(os.path.join(local_root, "index.html"), encoding="utf-8") as f:
+        html = f.read()
+    unlinked = [name for name in LEGAL_PAGES if not re.search(r'href="[^"]*' + re.escape(name), html)]
+    if unlinked:
+        sys.exit("Не выкладываю: в подвале index.html нет ссылок на " + ", ".join(unlinked)
+                 + ". Ссылки на все три документа должны быть на каждой странице.")
+    stubs = []
+    for name in LEGAL_PAGES:
+        with open(os.path.join(local_root, name), encoding="utf-8") as f:
+            if "[указать" in f.read():
+                stubs.append(name)
+    if stubs:
+        print("ВНИМАНИЕ: в " + ", ".join(stubs) + " остались заглушки [указать …] — "
+              "выкладываю, но владельцу обязательно отправь «Уведомление владельцу» из право.md.")
+
+
 def deploy(slug):
     local_root = os.path.join(SITES, slug, "site")
     if not os.path.isdir(local_root):
@@ -162,6 +192,7 @@ def deploy(slug):
     index = os.path.join(local_root, "index.html")
     if not os.path.exists(index):
         sys.exit("Нет index.html в site/")
+    legal_check(local_root)
     with open(index, encoding="utf-8") as f:
         m = re.search(r"<title>(.*?)</title>", f.read(), re.S | re.I)
     title = m.group(1).strip() if m else None
